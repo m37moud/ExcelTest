@@ -1,6 +1,7 @@
 package model
 
 data class CamRegisterDay(
+     val id: String?,
      val empName: String?,
      val departName: String?,
      val oDATE: String?,

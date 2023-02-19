@@ -15,7 +15,6 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
-
 class ImportExcelFile
     (val month: String = "", val year: String = "")
 //@Inject constructor()
@@ -143,7 +142,7 @@ class ImportExcelFile
 
 
     @Throws
-     fun readFromExcelFile(filePath: String): List<CamRegisterDay> {
+    fun readFromExcelFile(filePath: String): List<CamRegisterDay> {
         val empList = mutableListOf<CamRegisterDay>()
         try {
             val inputStream = FileInputStream(filePath)
@@ -168,6 +167,9 @@ class ImportExcelFile
                     for (columnNumber in 0..4) {
                         val value = xlWs.getRow(row.rowNum).getCell(columnNumber).toString()
                         when (columnNumber) {
+                            0->{
+                                status["id"] = value.substringAfter("'")
+                            }
                             1 -> { // empName
                                 status["empName"] = value
                             }
@@ -207,6 +209,7 @@ class ImportExcelFile
                     val shift = getTimeShift(dateTime = status["date&time"]!!, status["attendState"]!!)
 
                     val employ = CamRegisterDay(
+                        id = status["id"],
                         empName = status["empName"],
                         departName = status["department"],
                         oDATE = status["date"],
@@ -242,11 +245,11 @@ class ImportExcelFile
     }
 
 
-     fun getEmpReport(list: List<CamRegisterDay>, empName: String = ""): EmployeeResult? {
+    private fun getEmpReport(list: List<CamRegisterDay>, id: String = ""): EmployeeResult? {
 
 
         val l = list.filter {
-            it.empName == empName
+            it.id == id
         }
         if (l.isNotEmpty()) {
             Arbor.d(startDate.toString())
@@ -258,8 +261,7 @@ class ImportExcelFile
                 date in startDate..endDate
             }
             return if (ll.isNotEmpty()) {
-//                getAbsentDays(ll)
-                getDayDetail(ll)
+                getAbsentDays(ll)
             } else {
                 println("please enter correct month  :::: \n ll size = ${ll.size} ")
                 null
@@ -267,7 +269,7 @@ class ImportExcelFile
             }
 
         } else {
-            println("employee ( $empName ) not found please enter right name")
+            println("employee ( $id ) not found please enter right name")
             return null
         }
 
@@ -282,10 +284,9 @@ class ImportExcelFile
     /**
      * extract DayDetail
      */
-     fun getDayDetail(camDayList: List<CamRegisterDay>) : EmployeeResult? {
+    suspend fun getDayDetail(camDayList: List<CamRegisterDay>) {
         val dayDetail = mutableListOf<DayDetails?>()
-        val dayRegisterAttendsListIN = mutableListOf<RegisterAttends?>()
-        val dayRegisterAttendsListOut = mutableListOf<RegisterAttends?>()
+        val dayRegisterAttendsList = mutableListOf<RegisterAttends?>()
         val absentDays = mutableListOf<AbsentDay>()
 
 
@@ -297,18 +298,12 @@ class ImportExcelFile
         val patternCamRegisterDay = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         for (i in 21..days) {
 
-            val tempDate = LocalDate.of(year.toInt(), startDate.month, i)
+            val tempDate = LocalDate.of(year.toInt(), month.toInt(), i)
             val specificDayList = camDayList.filter { camDay ->
-                oDate= camDay.oDATE!!
+                oDate = camDay.oDATE!!
 
                 tempDate == LocalDate.parse(camDay.oDATE, patternCamRegisterDay)
 
-            }
-            val inList = specificDayList.filter {
-                it.status == "Check-in"
-            }
-            val outList = specificDayList.filter {
-                it.status == "Check-out"
             }
             val status = mutableMapOf<String, String>()
             val hourList = mutableListOf<String>()
@@ -327,6 +322,7 @@ class ImportExcelFile
                     status["timeOut"] = cam.time.toString()
 
                 }
+                repeat(hourList.size) {
                     RegisterAttends(
                         emp_name = status["empName"],
                         department = status["department"],
@@ -340,21 +336,21 @@ class ImportExcelFile
                         early = null,
 
                         ).apply {
-                        if(!dayRegisterAttendsListIN.contains(this))
-                            dayRegisterAttendsListIN.add(this)
+                        if (!dayRegisterAttendsList.contains(this))
+                            dayRegisterAttendsList.add(this)
                     }
+                }
 
 
             } else {
                 AbsentDay(
-
-                        absnt_type = AbsentType.RegularVacation,
+                    absnt_type = AbsentType.RegularVacation,
                     absnt_date = LocalDate.of(year.toInt(), month.toInt(), i),
                     absnt_reason = "",
                     month = month,
                     year = year,
                     name = status["empName"],
-                    department = status["empName"]?:""
+                    department = status["empName"]!!
                 ).apply {
                     absentDays.add(this)
                 }
@@ -373,8 +369,6 @@ class ImportExcelFile
 
 
 //        }
-
-        return null
     }
 
     /**
@@ -390,12 +384,12 @@ class ImportExcelFile
 
     }
 
-     fun getEmpReportById(list: List<CamRegisterDay>, id: String = "", empName: String = ""): EmployeeResult? {
-
+    fun getEmpReportById(list: List<CamRegisterDay>, id: String = "", empName: String = ""): EmployeeResult? {
+        Arbor.d(empName)
 
         val l = list.filter {
 //            it.id == id ||
-            it.empName == empName
+            it.id == id
         }
         if (l.isNotEmpty()) {
             val ll = l.filter {
@@ -404,8 +398,7 @@ class ImportExcelFile
                 date in startDate..endDate
             }
             return if (ll.isNotEmpty()) {
-//                getAbsentDays(ll)
-                getDayDetail(ll)
+                getAbsentDays(ll)
             } else {
                 println("please enter month  :::: \n ll size = ${ll.size} ")
                 null
@@ -516,30 +509,30 @@ class ImportExcelFile
             if (date.isAfter(date.withHour(7).withMinute(30)) && date.isBefore(date.withHour(8).withMinute(15))) {
 //                println("check 1 ")
 
-                wardia = "morning"
+                wardia = "اولى"
             } else if (date.isAfter(date.withHour(13).withMinute(0)) && date.isBefore(
                     date.withHour(17).withMinute(0)
                 )
             ) {
 //                println("check 2 ")
 
-                wardia = "afternoon"
+                wardia = "ثانية"
             } else if (date.isAfter(
                     date.withHour(22).withMinute(0)
                 ) && date.isBefore(date.withHour(23).withMinute(59))
             ) {
 //                println("check 3 ")
 
-                wardia = "night"
+                wardia = "ثالثة"
             } else if (date.isAfter(date.withHour(7).withMinute(30)) && date.isBefore(
                     date.withHour(8).withMinute(45)
                 )
             ) {
 
-                wardia = "morning"
+                wardia = "اولى متاخر"
 
             } else {
-                wardia = "late"
+                wardia = "متاخر"
 
             }
         } else {
@@ -547,28 +540,28 @@ class ImportExcelFile
             if (date.isAfter(date.withHour(15).withMinute(0)) && date.isBefore(date.withHour(16).withMinute(30))) {
 //                println("check 1 ")
 
-                wardia = "morning"
+                wardia = "اولى"
             } else if (date.isAfter(date.withHour(22).withMinute(0)) && date.isBefore(
                     date.withHour(23).withMinute(0)
                 )
             ) {
 //                println("check 2 ")
 
-                wardia = "afternoon"
+                wardia = "ثانية"
             } else if (date.isAfter(//date.dayOfMonth + 1
                     date.withDayOfMonth(date.minusDays(1).dayOfMonth).withHour(7).withMinute(0)
                 ) && date.withDayOfMonth(date.minusDays(1).dayOfMonth).isBefore(date.withHour(8).withMinute(30))
             ) {
 //                println("check 3 ")
 
-                wardia = "night"
+                wardia = "ثالثة"
             } else if (date.isAfter(//date.dayOfMonth + 1
                     date.withHour(7).withMinute(0)
                 ) && date.isBefore(date.withHour(8).withMinute(30))
             ) {
 //                println("check 3 ")
 
-                wardia = "night"
+                wardia = "ثالثة"
             }
         }
 
@@ -577,12 +570,12 @@ class ImportExcelFile
     }
 
     //    fun doSomeWork(list: List<Employee>){
-     fun doSomeWork(list: List<CamRegisterDay>): List<EmployeeResult> {
+    fun doSomeWork(list: List<CamRegisterDay>): List<EmployeeResult> {
         val employeeResultList = mutableListOf<EmployeeResult>()
 
         val empNameList =
             list.map {
-                it.empName
+                it.id
             }.distinct()
         println("empNameList size = ${empNameList.size}")
         var i = 0
@@ -590,7 +583,7 @@ class ImportExcelFile
 //            val empName = it.name
 //            if (!empNameList.contains(empName)) {
 //            println("empName = $empName")
-            val empResult = getEmpReport(list, empName = empName!!)
+            val empResult = getEmpReport(list, id = empName!!)
             if (empResult != null) {
                 employeeResultList.add(empResult)
             }
@@ -606,7 +599,7 @@ class ImportExcelFile
     }
 
 
-     fun getAbsentDays(list: List<CamRegisterDay>): EmployeeResult {
+    fun getAbsentDays(list: List<CamRegisterDay>): EmployeeResult {
         var empList = list.toMutableList()
         var numberOfAttendantDays = 0
         var attendDays = mutableListOf<DayDetails>()

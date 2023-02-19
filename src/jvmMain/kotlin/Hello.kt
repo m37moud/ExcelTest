@@ -154,7 +154,7 @@ fun getPathToWork(path: String) {
             pathList.add(file)
 
     }
-    importer = ImportExcelFile(file.name, year)
+    importer = ImportExcelFile("8", "2022")
     takeAllPaths(pathList)
     println("empList = ${empList.size}")
 
@@ -164,7 +164,7 @@ fun getPathToWork(path: String) {
         employeeResultList = importer.doSomeWork(empList)
         if (employeeResultList.isNotEmpty()){
             println("extracted employee result sucssesful")
-            empList.clear()
+//            empList.clear()
             makeChoise()
 
         }else{
@@ -238,8 +238,8 @@ private fun makeChoise() {
 //                }
 //Mohamed Ramadan Abdelfatah
                 val empw = importer.getEmpReportById(empList, entered, entered)
-//                println(emp.toString())
-                Arbor.d(empw.toString())
+                println(empw.toString())
+//                Arbor.d(empw.toString())
             }
             3 -> {
 

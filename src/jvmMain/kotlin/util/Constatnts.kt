@@ -31,16 +31,16 @@ class Constatnts {
 
          fun getWardiaAsNum(wardia: String): Int {
             return when (wardia) {
-                "اولى" -> {
+                "morning" -> {
                     1
                 }
-                "ثاني" -> {
+                "afternoon" -> {
                     2
                 }
-                "ثالثة" -> {
+                "night" -> {
                     3
                 }
-                "اولى متاخر" -> {
+                "morning" -> {
                     1
                 }
                 else -> {
